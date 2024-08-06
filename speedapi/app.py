@@ -53,8 +53,7 @@ def read_users():
 def update_user(user_id: int, user: UserPrivate):
     if user_id == 0 or user_id > len(database):
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='User not exists.'
+            status_code=HTTPStatus.NOT_FOUND, detail='User not exists.'
         )
 
     updated_user = UserDB(id=user_id, **user.model_dump())
@@ -62,14 +61,14 @@ def update_user(user_id: int, user: UserPrivate):
 
     return updated_user
 
+
 @app.delete(
     '/users/{user_id}', status_code=HTTPStatus.OK, response_model=Message
 )
 def delete_user(user_id: int):
     if user_id == 0 or user_id > len(database):
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='User not exists.'
+            status_code=HTTPStatus.NOT_FOUND, detail='User not exists.'
         )
 
     del database[user_id - 1]
