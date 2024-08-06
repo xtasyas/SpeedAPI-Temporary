@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
-from speedapi.schemas import UserPublic, UserPrivate
+from speedapi.schemas import UserPrivate, UserPublic
+
 
 def test_app(client):
     response = client.get('/')
