@@ -1,19 +1,14 @@
 from http import HTTPStatus
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from speedapi.database import get_session
+from speedapi.models import User
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from speedapi.schemas import (
-    Message,
-    UserDB,
-    UserPrivate,
-    UserPublic,
-    UsersList,
-)
+from speedapi.schemas import Message, UserPrivate, UserPublic, UsersList
 
 app = FastAPI(debug=True)
-
-
-database = []
 
 
 # This decorator is refered as 'Path Operation Decorator'
@@ -26,51 +21,72 @@ def read_root():
     return {'message': 'Welcome to SpeedAPI!'}
 
 
-@app.post('/users/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserPrivate):
-    user_db = UserDB(id=len(database) + 1, **user.model_dump())
+@app.post('/users/',
+          status_code=HTTPStatus.CREATED,
+          response_model=UserPublic)
+def create_user(user: UserPrivate, session: Session = Depends(get_session)):
+    verify_user_in_database = session.scalar(
 
-    for any_user in database:
-        if any_user.username == user.username:
-            raise HTTPException(
-                status_code=HTTPStatus.BAD_REQUEST,
-                detail='User already exists.',
-            )
 
-    database.append(user_db)
+        select(User).filter_by(
+            username=user.username,
+            email=user.email
 
-    return user_db
+        )
+    )
+
+    if verify_user_in_database:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='User already exists.',
+        )
+
+    session.add(new_user := User(**user.model_dump()))
+    session.commit()
+    session.refresh(new_user)
+
+    return new_user
 
 
 @app.get('/users/', status_code=HTTPStatus.OK, response_model=UsersList)
-def read_users():
-    return {'users': database}
+def read_users(
+    offset: int = 0, limit: int = 10, session: Session = Depends(get_session)
+):
+    users = session.scalars(select(User).limit(limit).offset(offset)).all()
+
+    return {'users': users}
 
 
-@app.put(
-    '/users/{user_id}', status_code=HTTPStatus.OK, response_model=UserPrivate
-)
-def update_user(user_id: int, user: UserPrivate):
-    if user_id == 0 or user_id > len(database):
+@app.put('/users/{user_id}', status_code=HTTPStatus.OK, response_model=UserPrivate)
+def update_user(
+    user_id: int, user: UserPrivate, session: Session = Depends(get_session)
+):
+    user_to_be_updated = session.get(entity=User, ident=user_id)
+
+    if user_to_be_updated is None:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail='User not exists.'
         )
 
-    updated_user = UserDB(id=user_id, **user.model_dump())
-    database[user_id - 1] = updated_user
+    for attribute in ('username', 'email', 'password'):
+        setattr(user_to_be_updated, attribute, getattr(user, attribute))
 
-    return updated_user
+    session.add(user_to_be_updated)
+    session.commit()
+
+    return user_to_be_updated
 
 
-@app.delete(
-    '/users/{user_id}', status_code=HTTPStatus.OK, response_model=Message
-)
-def delete_user(user_id: int):
-    if user_id == 0 or user_id > len(database):
+@app.delete('/users/{user_id}', status_code=HTTPStatus.OK, response_model=Message)
+def delete_user(user_id: int, session: Session = Depends(get_session)):
+    user_to_be_deleted = session.get(entity=User, ident=user_id)
+
+    if user_to_be_deleted is None:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail='User not exists.'
         )
 
-    del database[user_id - 1]
+    session.delete(user_to_be_deleted)
+    session.commit()
 
     return {'message': f'User with ID {user_id} has been deleted.'}
