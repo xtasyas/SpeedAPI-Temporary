@@ -1,15 +1,20 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import Session
 
 from speedapi.app import app
+from speedapi.database import get_session
 from speedapi.models import metadata_registry
 
 
 @pytest.fixture
 def engine():
-    engine = create_engine('sqlite:///:memory:')
+    engine = create_engine(
+        'sqlite:///:memory:',
+        connect_args={'check_same_thread': False},
+        poolclass=StaticPool,
+    )
 
     metadata_registry.metadata.create_all(bind=engine)
 
@@ -25,9 +30,15 @@ def session(engine):
 
 
 @pytest.fixture
-def client():
+def client(session):
+    def get_session_override():
+        return session
+
     with TestClient(app=app) as client:
+        app.dependency_overrides[get_session] = get_session_override
         yield client
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -43,9 +54,9 @@ def user_template():
 
 @pytest.fixture
 def user(client, user_template):
-    client.post(
+    response = client.post(
         url='/users/',
         json=user_template,
     )
 
-    return user_template
+    return response.json()

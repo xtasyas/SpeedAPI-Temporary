@@ -1,0 +1,47 @@
+# .pre-commit-config.yaml
+
+# Versão mínima do pre-commit para garantir compatibilidade.
+minimum_pre_commit_version: '2.9.3'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: trailing-whitespace  # Remove espaços em branco ao final das linhas.
+      - id: end-of-file-fixer    # Assegura uma linha em branco ao final dos arquivos.
+      - id: check-yaml           # Valida arquivos YAML.
+      - id: check-json           # Valida arquivos JSON.
+      - id: check-merge-conflict # Detecta e evita commits com conflitos de merge não resolvidos.
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.5.6
+    hooks:
+      - id: ruff
+        args: ["--line-length=85", "--extend-exclude=migrations/"]
+        additional_dependencies: []
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort
+        args: ["--profile", "black"]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: bandit
+        args: ["--severity-level", "high"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports"]
+
+#   - repo: https://github.com/pycqa/pydocstyle
+#     rev: 6.3.0
+#     hooks:
+#       - id: pydocstyle
+#         args: ["--convention=google"]  # Verifica docstrings com convenções Google.

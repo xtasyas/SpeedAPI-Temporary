@@ -15,8 +15,8 @@ class User:
 
     id: Mapped[intpk] = mapped_column(init=False)
 
-    username: Mapped[str] = mapped_column(String(255), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -26,4 +26,5 @@ class User:
     updated_at: Mapped[datetime] = mapped_column(
         init=False,
         server_default=func.now(),
+        onupdate=func.now(),
     )
