@@ -28,7 +28,8 @@ httpie = "^3.2.3"
 httpx = "^0.27.0"
 
 [tool.pytest.ini_options]
-addopts = '--cov=speedapi --cov-report html'
+pythonpath = '.'
+addopts = '-p no:warnings --cov=speedapi --cov-report html'
 
 [tool.ruff]
 line-length = 85
@@ -45,3 +46,11 @@ select = ['I', 'F', 'E', 'W', 'PL', 'PT']
 [tool.ruff.format]
 preview = true
 quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check . ; ruff format . --diff'
+format = 'ruff check . --fix ; ruff format .'
+pre_test = 'task lint'
+test = 'pytest -s -x -vv'
+post_test = 'coverage html'
+run = 'fastapi dev speedapi/app.py'
